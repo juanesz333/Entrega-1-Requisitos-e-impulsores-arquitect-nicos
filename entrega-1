@@ -1,0 +1,407 @@
+# Entrega 1 — Requisitos e impulsores arquitectónicos
+
+## 0. Identificación
+
+- **Proyecto:**  FoodBridge — Plataforma para la gestión y distribución de excedentes alimentarios
+- **Integrantes:**
+  - Juan Esteban Fernández Segura
+  - Samuel Felipe Ricaurte Guerra 
+- **Grupo:** 4
+- **Fecha:** 2026-08-16
+- **Commit o etiqueta de entrega:** Entrega 1
+
+---
+
+## 1. Alcance validado
+
+### 1.1 Propósito
+
+Reducir el desperdicio de alimentos aptos para el consumo que generan diariamente restaurantes, supermercados y panaderías, permitiendo que las organizaciones sociales conozcan oportunamente su disponibilidad y coordinen la recolección antes de que se venzan, reemplazando la coordinación informal actual (llamadas, WhatsApp, correo) por un canal centralizado y con reglas claras de reclamación.
+
+### 1.2 Interesados principales
+
+| INT-01 | Establecimiento Donante | (restaurante, supermercado o panadería): necesita publicar rápidamente sus excedentes disponibles y tener certeza de que serán reclamados y recolectados a tiempo. |
+| INT-02 | Organización social o banco de alimentos | necesita conocer oportunamente qué alimentos están disponibles y reclamarlos sin riesgo de conflicto con otra organización. |
+| INT-03 | Administrador de la plataforma | necesita contar con visibilidad y trazabilidad de las donaciones publicadas, reclamadas y recolectadas, para verificar el correcto funcionamiento del sistema y reportar el impacto (alimentos rescatados). |
+
+### 1.3 Flujo principal
+
+- **Nombre:** Publicación y recolección de donación
+- **Iniciado por:** El establecimiento donante
+- **Evento de inicio:** el establecimiento cuenta con un excedente de alimentos aptos para el consumo que debe entregarse antes de una fecha límite.
+- **Resultado observable:** la donación es recolectada por una organización social antes de vencer, con el proceso completo registrado en el sistema.
+
+1. El establecimiento publica una donación indicando tipo de alimento, cantidad y fecha límite de recolección.
+2. El sistema valida los datos de la publicación y la registra en estado "publicada".
+3. Las organizaciones sociales consultan las donaciones disponibles, priorizadas según su cercanía al vencimiento.
+4. Una organización reclama una donación disponible.
+5. El sistema valida que la donación no haya sido reclamada previamente y la cambia a estado "reclamada".
+6. El sistema notifica al establecimiento qué organización reclamó la donación.
+7. La organización se presenta a recolectar dentro del plazo de confirmación acordado.
+8. El establecimiento confirma la entrega y el sistema cambia la donación a estado "recolectada".
+
+### 1.4 Alcance incluido
+
+-  Publicación de donaciones por parte de establecimientos.
+- Publicación de donaciones por parte de establecimientos.
+- Validación de reglas de negocio sobre reclamación, plazos y estados.
+- Confirmación de recolección y registro del historial.
+- Notificaciones simuladas entre las partes.
+
+### 1.5 Fuera de alcance
+
+- Optimización de rutas o logística de transporte propia para la recolección.
+- Certificación o validación sanitaria de los alimentos publicados.
+- Pagos o cualquier tipo de transacción monetaria.
+- Aplicación móvil nativa (se trabajará como API/web).
+- Integración real (no simulada) con proveedores de notificaciones SMS o push, o con servicios de geolocalización.
+
+### 1.6 Recorrido vertical previsto
+
+- **Entrada:** un establecimiento publica una donación con tipo de alimento, cantidad y fecha límite.
+- **Actor que lo inicia:** | INT-01 | Establecimiento Donante |
+- **Comportamiento principal:** el sistema valida la publicación, la hace visible a las organizaciones, permite que una la reclame de forma exclusiva, controla el plazo de confirmación y registra la recolección final.
+- **Reglas involucradas:** RN-01, RN-02, RN-03, RN-05.
+- **Resultado observable:**  una donación pasa por el ciclo completo publicada → reclamada → recolectada (o expirada/cancelada), quedando registrada para trazabilidad.
+- **Requisitos que cubrirá:** [RF-XX, RF-XX]
+
+---
+
+## 2. Requisitos funcionales y criterios de aceptación
+
+### RF-01 — Publicar donación
+
+> Como establecimiento donante
+> quiero publicar una donación indicando tipo de alimento, cantidad y fecha límite de recolección 
+> para que las organizaciones sociales puedan conocerla y reclamarla a tiempo.
+
+- **Prioridad:** Must
+- **Reglas relacionadas:** RN-01
+
+#### CA-01 Publicación exitosa de una donación
+
+```gherkin
+Scenario: Publicación exitosa de una donación
+  Given que el establecimiento ha iniciado sesión And indica tipo de alimento, cantidad y una fecha límite de recolección válida
+  When el establecimiento publica la donación
+  Then la donación queda registrada en estado "publicada"
+  And es visible para las organizaciones sociales
+```
+
+#### CA-02  Publicación rechazada por fecha límite inválida
+
+```gherkin
+Scenario: Publicación rechazada por fecha límite inválida
+  Given que el establecimiento intenta publicar una donación And la fecha límite indicada ya pasó o no fue especificada
+  When el establecimiento intenta confirmar la publicación
+  Then el sistema rechaza la publicación And se muestra un mensaje indicando que la fecha límite no es válida
+```
+
+---
+
+### RF-02 — Consultar donaciones disponibles
+
+> Como organización social,  
+> quiero consultar las donaciones disponibles,  
+> para identificar cuáles puedo recolectar antes de que venzan
+
+- **Prioridad:** Must
+- **Reglas relacionadas:** RN-04
+
+#### CA-03 Consulta de donaciones disponibles
+
+```gherkin
+Scenario: Consulta de donaciones disponibles
+  Given que existen donaciones en estado "publicada"
+  When una organización social consulta las donaciones disponibles
+  Then el sistema muestra la lista de donaciones publicadas And las donaciones más próximas a vencer aparecen priorizadas
+
+```
+
+---
+
+### RF-03 — Reclamar una donación
+
+> Como organización social,
+> quiero reclamar una donación disponible,
+> para asegurar que seré yo quien la recolecte.
+
+- **Prioridad:** Must
+- **Reglas relacionadas:** RN-02, RN-05
+
+#### CA-04 — Reclamación exitosa de una donación
+
+```gherkin
+Scenario: Reclamación exitosa de una donación
+  Given que existe una donación en estado "publicada"
+  When una organización social reclama la donación
+  Then la donación cambia a estado "reclamada" And queda asociada a esa organización
+
+```
+
+#### CA-05 — Reclamación rechazada por donación ya reclamada
+
+```gherkin
+Scenario: Reclamación rechazada por donación ya reclamada
+  Given que una donación ya se encuentra en estado "reclamada" por otra organización
+  When una segunda organización intenta reclamarla
+  Then el sistema rechaza la reclamación And informa que la donación ya no está disponible
+
+---
+
+---
+
+### RF-04 — Confirmar recolección
+
+> Como organización social,
+> quiero confirmar la recolección de una donación que reclamé,
+> para que el establecimiento sepa que fue efectivamente recogida.
+
+- **Prioridad:** Must
+- **Reglas relacionadas:** RN-03, RN-05
+
+#### CA-06 — Confirmación de recolección dentro del plazo
+
+```gherkin
+Scenario: Confirmación de recolección dentro del plazo
+  Given que una donación está en estado "reclamada" por una organización And el plazo de confirmación aún no ha vencido
+  When la organización confirma la recolección
+  Then la donación cambia a estado "recolectada" And queda registrada en el historial del establecimiento
+
+```
+
+#### CA-12 — Confirmación rechazada por organización no autorizada
+
+```gherkin
+Scenario: Confirmación rechazada por organización no autorizada
+  Given que una donación está reclamada por una organización específica
+  When una organización distinta intenta confirmar la recolección
+  Then el sistema rechaza la confirmación
+  And indica que solo la organización que reclamó puede confirmarla
+
+```
+
+---
+
+### RF-05 —  Notificar al establecimiento sobre reclamación
+
+> Como establecimiento donante,
+> quiero recibir una notificación cuando mi donación sea reclamada,
+> para saber que alguien va a recogerla.
+
+- **Prioridad:** Should
+- **Reglas relacionadas:** No aplica
+
+#### CA-07 — Notificación al establecimiento cuando su donación es reclamada
+
+```gherkin
+Scenario: Notificación al establecimiento cuando su donación es reclamada
+  Given que una donación publicada por un establecimiento es reclamada
+  When el cambio de estado se registra
+  Then el sistema genera una notificación simulada al establecimiento
+  And la notificación indica qué organización la reclamó
+
+```
+
+```
+
+### RF-06 — Notificar a organizaciones sobre nuevas donaciones
+
+> Como organización social,
+> quiero recibir una notificación cuando se publique una donación próxima a vencer,
+> para poder reaccionar rápidamente.
+
+- **Prioridad:** Should
+- **Reglas relacionadas:** RN-04
+
+#### CA-08 — Notificación a organizaciones ante una donación próxima a vencer
+
+```gherkin
+Scenario: Notificación a organizaciones ante una donación próxima a vencer
+  Given que se publica una nueva donación con poco tiempo antes de su fecha límite
+  When la publicación se registra
+  Then el sistema genera una notificación simulada a las organizaciones sociales
+
+```
+
+```
+
+### RF-07 — Consultar historial de donaciones
+
+> Como establecimiento donante,
+> quiero consultar el historial de mis donaciones,
+> para llevar control de lo que he entregado.
+
+- **Prioridad:** Could
+- **Reglas relacionadas:** No aplica
+
+#### CA-09 — Consulta del historial de donaciones
+
+```gherkin
+Scenario: Consulta del historial de donaciones
+  Given que un establecimiento tiene donaciones publicadas previamente
+  When el establecimiento consulta su historial
+  Then el sistema muestra las donaciones con su estado actual
+
+```
+
+```
+
+### RF-08 — Liberación automática de reclamaciones vencidas
+
+> Como organización social,
+> quiero que una reclamación no confirmada dentro del plazo se libere automáticamente,
+> para que otra organización pueda recolectar el alimento antes de que se dañe.
+
+- **Prioridad:** Must
+- **Reglas relacionadas:** RN-03
+
+#### CA-10 — Liberación automática de una reclamación vencida
+
+```gherkin
+Scenario: Liberación automática de una reclamación vencida
+  Given que una donación está en estado "reclamada"
+  And transcurre el plazo definido sin que la organización confirme la recolección
+  When se cumple el tiempo límite de confirmación
+  Then la donación vuelve automáticamente a estado "publicada"
+  And queda disponible para que otra organización la reclame
+
+```
+
+#### CA-11 — Confirmación fuera del plazo es rechazada
+
+```gherkin
+Scenario: Confirmación fuera del plazo es rechazada
+  Given que una reclamación superó el plazo de confirmación y la donación volvió a estado "publicada"
+  When la organización original intenta confirmar la recolección
+  Then el sistema rechaza la confirmación
+  And indica que la reclamación ha expirado
+
+```
+
+---
+
+## 3. Reglas de negocio
+
+### RN-01 — Fecha límite de recolección
+
+- **Descripción:** toda donación debe publicarse con una fecha y hora límite de recolección, previa al momento en que el alimento deja de ser apto para el consumo.
+- **Condición:** el establecimiento publica una nueva donación.
+- **Consecuencia:**  si no se especifica una fecha límite válida, el sistema no permite publicar la donación.
+- **Requisitos relacionados:** RF-01
+
+### RN-02 — Reclamación única por donación
+
+- **Descripción:** una donación solo puede ser reclamada por una organización a la vez.
+- **Condición:** una organización intenta reclamar una donación.
+- **Consecuencia:** si la donación ya fue reclamada por otra organización, el sistema rechaza la nueva reclamación.
+- **Requisitos relacionados:** RF-03
+
+### RN-03 — Confirmación dentro de la ventana de tiempo*
+
+- **Descripción:** una organización debe confirmar la recolección dentro de un plazo definido después de reclamar la donación.
+- **Condición:** transcurre el tiempo límite sin que la organización confirme o recolecte.
+- **Consecuencia:** la reclamación se libera automáticamente y la donación vuelve a estar disponible para otras organizaciones.
+- **Requisitos relacionados:** RF-04, RF-08
+
+### RN-04 — Priorización por urgencia de vencimiento
+
+- **Descripción:** las donaciones con menor tiempo restante antes de su fecha límite deben mostrarse como prioritarias frente a las demás.
+- **Condición:** existen varias donaciones disponibles simultáneamente.
+- **Consecuencia:** el sistema resalta o prioriza en la consulta las donaciones más próximas a vencer.
+- **Requisitos relacionados:** RF-02, RF-06
+
+### RN-05 — Secuencia válida de estados
+
+- **Descripción:** una donación solo puede avanzar siguiendo un orden definido de estados.
+- **Condición:** cualquier intento de actualizar el estado de una donación.
+- **Consecuencia:** - solo se permite la secuencia publicada → reclamada → recolectada, o el paso a expirada/cancelada desde los estados intermedios; no se permiten saltos de estado.
+- **Requisitos relacionados:** RF-03, RF-04
+
+## 4. Escenarios de calidad
+
+### EC-01 — Consulta rápida de donaciones disponibles
+
+- **Atributo de calidad:** Disponibilidad
+- **Fuente del estímulo:** organización social
+- **Estímulo:** consulta las donaciones disponibles
+- **Entorno:** operación normal
+- **Artefacto afectado:** servicio de consulta de donaciones
+- **Respuesta esperada:** el sistema presenta las donaciones publicadas vigentes
+- **Medida de respuesta:** el 95 % de las consultas responde en menos de 2 segundos
+- **Forma prevista de verificación:** prueba de carga automatizada sobre el endpoint de consulta de donaciones (a ejecutar en una entrega posterior)
+
+### EC-02 — Publicación sencilla de una donación por primera vez
+
+- **Atributo de calidad:**  Usabilidad
+- **Fuente del estímulo:** establecimiento donante sin experiencia previa en la plataforma
+- **Estímulo:** intenta publicar una donación por primera vez
+- **Entorno:** operación normal
+- **Artefacto afectado:** interfaz de publicación de donaciones
+- **Respuesta esperada:** el establecimiento completa la publicación sin asistencia externa
+- **Medida de respuesta:** el usuario logra publicar una donación en menos de 5 pasos y en menos de 3 minutos
+- **Forma prevista de verificación:** prueba de usabilidad con usuarios reales o simulados, midiendo pasos y tiempo (a ejecutar en una entrega posterior)
+
+### EC-03 — Reclamación simultánea de una misma donación
+
+- **Atributo de calidad:**  Consistencia (integridad de datos ante concurrencia)
+- **Fuente del estímulo:** dos organizaciones sociales
+- **Estímulo:** - intentan reclamar la misma donación de forma simultánea
+- **Entorno:** alta concurrencia
+- **Artefacto afectado:** servicio de reclamación de donaciones
+- **Respuesta esperada:** solo una de las reclamaciones es aceptada; la otra es rechazada
+- **Medida de respuesta:** el 100 % de los casos de reclamación simultánea resulta en una única donación reclamada, sin duplicados
+- **Forma prevista de verificación:** prueba de concurrencia automatizada simulando solicitudes simultáneas (a ejecutar en una entrega posterior)
+
+### EC-04 — Consulta del historial de cambios de estado de una donación
+
+- **Atributo de calidad:**  Auditabilidad
+- **Fuente del estímulo:** administrador de la plataforma (INT-03)
+- **Estímulo:** - solicita el historial de cambios de estado de una donación
+- **Entorno:** operación normal
+- **Artefacto afectado:** módulo de historial/registro de eventos
+- **Respuesta esperada:** el sistema muestra todos los cambios de estado con fecha y actor responsable
+- **Medida de respuesta:** el 100 % de los cambios de estado quedan registrados con marca de tiempo
+- **Forma prevista de verificación:** -  revisión del registro almacenado tras ejecutar un caso de prueba con varios cambios de estado (a ejecutar en una entrega posterior)
+
+---
+
+## 5. Requisitos arquitectónicamente significativos 
+
+| ID | Elemento de origen | Justificación de importancia arquitectónica |
+|---|---|---|
+| ASR-01 | EC-03 | La necesidad de garantizar que una donación no pueda ser reclamada por dos organizaciones a la vez puede influir en decisiones futuras sobre control de concurrencia y manejo de transacciones al actualizar el estado de una donación. |
+| ASR-02 | EC-01 | El tiempo de respuesta esperado en la consulta de donaciones disponibles puede influir en cómo se estructuran y optimizan las consultas al almacenamiento de datos. |
+| ASR-03 | RN-03 | La liberación automática de una reclamación cuando vence el plazo de confirmación implica un mecanismo que verifique el paso del tiempo de forma independiente a la interacción del usuario, lo cual puede influir en la estructura del sistema. |
+
+
+---
+
+## 6. Restricciones
+
+| ID | Descripción | Origen | Consecuencia para el proyecto |
+|---|---|---|---|
+| RES-01 | no se cuenta con acceso a un servicio real de notificaciones (SMS/push) ni de geolocalización o logística de transporte | restricción técnica y de infraestructura del proyecto académico. | estos servicios deben simularse dentro del sistema, sin depender de un proveedor externo real. |
+| RES-02 | el proyecto se desarrolla en el marco de un curso académico del semestre, entre dos estudiantes. | restricción institucional o de entorno. | el alcance debe mantenerse acotado a un flujo principal completo, sin construir una plataforma comercial completa. |
+| RES-03 | el conocimiento técnico actual del equipo sobre este dominio y sobre las herramientas a utilizar es limitado. | restricción de tiempo y conocimiento del equipo. | el diseño podría ajustarse progresivamente conforme avance el semestre y el equipo profundice en el dominio y en las tecnologías seleccionadas. |
+
+---
+
+## 7. Matriz inicial de trazabilidad
+
+<!--
+Utilicen los identificadores definidos en las secciones anteriores.
+
+Escriban “No aplica” cuando una relación no exista. No inventen relaciones únicamente para completar las celdas.
+-->
+
+| Requisito | Interesado | Criterios de aceptación | Reglas de negocio | Escenarios de calidad | ASR | Restricciones |
+|---|---|---|---|---|---|---|
+| RF-01 | INT-01 | CA-01, CA-02 | RN-01 | EC-02 | No aplica | RES-02 |
+| RF-02 | INT-02 | CA-03 | RN-04 | EC-01 | ASR-02 | No aplica |
+| RF-03 | INT-01, INT-02 | CA-04, CA-05 | RN-02, RN-05 | EC-03 | ASR-01 | No aplica |
+| RF-04 | INT-01, INT-02 | CA-06, CA-12 | RN-03, RN-05 | No aplica | No aplica | No aplica |
+| RF-05 | INT-01 | CA-07 | No aplica | No aplica | ASR-04 | RES-01 |
+| RF-06 | INT-02 | CA-08 | RN-04 | No aplica | ASR-04 | RES-01 |
+| RF-07 | INT-01, INT-03 | CA-09 | No aplica | EC-04 | No aplica | No aplica |
+| RF-08 | INT-02 | CA-10, CA-11 | RN-03 | No aplica | ASR-03 | No aplica |
